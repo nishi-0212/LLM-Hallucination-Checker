@@ -1,0 +1,8 @@
+numpy
+pandas
+nltk
+wikipedia
+sentence-transformers
+transformers
+faiss-cpu
+torch
