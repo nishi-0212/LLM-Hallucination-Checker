@@ -1,123 +1,155 @@
 # 🧠 LLM Hallucination Checker
 
-A lightweight explainable AI system that detects hallucinations in AI-generated responses by verifying factual claims against external evidence.
+[![Python](https://img.shields.io/badge/Python-3.9+-blue?logo=python)](https://python.org)
+[![Streamlit](https://img.shields.io/badge/Streamlit-Live-red?logo=streamlit)](https://YOUR-STREAMLIT-URL-HERE)
+[![HuggingFace](https://img.shields.io/badge/HuggingFace-Transformers-orange)](https://huggingface.co/facebook/bart-large-mnli)
+[![FAISS](https://img.shields.io/badge/FAISS-Vector%20Search-yellow)](https://github.com/facebookresearch/faiss)
+[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
-🔗 Live Demo: https://llm-hallucination-checker-bynishi.streamlit.app
+An end-to-end pipeline to detect hallucinations in LLM-generated answers by decomposing responses into atomic factual claims, retrieving Wikipedia evidence via semantic search, and verifying each claim using a transformer-based NLI model.
 
----
-
-## 🛠️ Tech Stack
-
-![Python](https://img.shields.io/badge/Python-3.9+-blue)
-![Streamlit](https://img.shields.io/badge/Frontend-Streamlit-red)
-![HuggingFace](https://img.shields.io/badge/HuggingFace-Transformers-orange)
-![SentenceTransformers](https://img.shields.io/badge/Sentence--Transformers-Embeddings-green)
-![FAISS](https://img.shields.io/badge/FAISS-Vector%20Search-yellow)
-![Wikipedia](https://img.shields.io/badge/Data-Wikipedia-lightgrey)
+👉 **[Try the Live App](https://YOUR-STREAMLIT-URL-HERE)**
 
 ---
 
-## 📌 Overview
+## 🔍 The Problem
 
-LLM Hallucination Checker is an explainable evaluation tool that analyzes AI-generated answers and identifies potentially hallucinated factual claims.
+Large Language Models frequently generate confident-sounding but factually incorrect statements — a phenomenon known as **hallucination**. This is a critical failure mode in production AI systems, especially in healthcare, legal, and educational contexts.
 
-Instead of blindly trusting an LLM response (a bold life choice), the system breaks the answer into individual claims, retrieves supporting evidence, and uses Natural Language Inference (NLI) to determine whether each claim is supported, contradicted, or uncertain.
-
-The project acts as a **post-generation factual verification layer** for AI systems.
-
----
-
-## ✨ Features
-
-- Claim-level hallucination detection
-- Evidence retrieval from Wikipedia
-- Semantic similarity search using embeddings + FAISS
-- Natural Language Inference-based factual verification
-- Explainable claim-by-claim breakdown
-- Hallucination scoring system
-- Final verdict generation:
-  - ✅ Grounded
-  - ⚠️ Partially Grounded
-  - ❌ Hallucinated
+This project implements a **post-processing safety layer** that evaluates any LLM output for factual grounding before it reaches end users.
 
 ---
 
 ## 🧠 How It Works
 
-### 1. Claim Extraction
-The AI-generated response is split into individual factual claims.
-
-Example:
-
-**Input:**
-```text
-Stars are massive balls of hot plasma held together by gravity. They shine because nuclear fusion occurs in their cores.
+```
+LLM Output + Topic
+        │
+        ▼
+┌─────────────────────┐
+│   Claim Splitter    │  NLTK sentence tokenization + pronoun normalization
+└────────┬────────────┘
+         │  atomic claims
+         ▼
+┌─────────────────────┐
+│  Wikipedia Fetcher  │  Multi-fallback retrieval (exact → fuzzy → summary)
+└────────┬────────────┘
+         │  evidence text
+         ▼
+┌─────────────────────┐
+│   FAISS Retriever   │  all-MiniLM-L6-v2 embeddings → top-k chunk retrieval
+└────────┬────────────┘
+         │  relevant chunks
+         ▼
+┌─────────────────────┐
+│    NLI Verifier     │  facebook/bart-large-mnli → ENTAILMENT/NEUTRAL/CONTRADICTION
+└────────┬────────────┘
+         │  (label, confidence) per claim
+         ▼
+┌─────────────────────┐
+│   Hallucination     │  weighted scoring → 0.0 (grounded) to 1.0 (hallucinated)
+│      Scorer         │
+└────────┬────────────┘
+         │
+         ▼
+   Verdict + Score + Claim-level breakdown
+   ✅ Grounded  ⚠️ Partially Grounded  🚨 Hallucinated
 ```
 
-**Extracted Claims:**
-- Stars are massive balls of hot plasma held together by gravity
-- Stars shine because nuclear fusion occurs in their cores
+---
+
+## ✨ Features
+
+- **Claim-level decomposition** — verifies each sentence independently, not the response as a whole
+- **Semantic retrieval** — FAISS vector search finds the most relevant Wikipedia evidence per claim
+- **NLI-based verification** — `facebook/bart-large-mnli` classifies each claim as Entailment, Neutral, or Contradiction
+- **Interpretable scoring** — weighted hallucination score (0–1) with confidence per claim
+- **Pronoun normalization** — resolves "He/She/They" references before verification for accuracy
+- **Multi-fallback Wikipedia fetch** — handles disambiguation, fuzzy matching, and partial titles
+- **Model-agnostic** — works on output from any LLM (GPT, Gemini, Claude, Llama, etc.)
+- **Deployed Streamlit app** — real-time claim-by-claim breakdown with colour-coded verdicts
 
 ---
 
-### 2. Evidence Retrieval
-Relevant evidence is fetched from Wikipedia and converted into embeddings using Sentence Transformers.
+## 📁 Project Structure
 
-Similarity search is performed using FAISS to retrieve the most relevant evidence chunks.
-
----
-
-### 3. Claim Verification
-Each claim is verified using Hugging Face's `facebook/bart-large-mnli` NLI model.
-
-Possible outcomes:
-- **Entailment** → Supported
-- **Neutral** → Insufficient evidence
-- **Contradiction** → Likely hallucination
-
----
-
-### 4. Final Scoring
-Claim-level results are aggregated into a hallucination score between **0 and 1**.
-
-Example:
-- 0.0 → Fully Grounded
-- 0.3 → Partially Grounded
-- 0.8 → Likely Hallucinated
+```
+LLM-HALLUCINATION-CHECKER/
+├── .streamlit/
+│   └── config.toml                       
+├── hallucination_checker/   
+│   ├── __init__.py          
+│   ├── claim_splitter.py    
+│   ├── nli_verifier.py      
+│   ├── retriever.py         
+│   └── scorer.py            
+├── .gitignore               
+├── app.py                   
+├── LLM_Hallucination.ipynb  
+├── README.md                
+└── requirements.txt         
+```
 
 ---
 
-## 💻 Demo UI
-
-The Streamlit interface provides:
-
-- AI answer input
-- Topic/subject input
-- Hallucination score visualization
-- Claim-by-claim evidence analysis
-- Final verdict summary
-
----
-
-## 🚀 Installation
-
-Clone the repository:
+## 🚀 Run Locally
 
 ```bash
 git clone https://github.com/nishi-0212/LLM-Hallucination-Checker.git
 cd LLM-Hallucination-Checker
-```
-
-Install dependencies:
-
-```bash
 pip install -r requirements.txt
-```
-
-Run locally:
-
-```bash
 streamlit run app.py
 ```
 
+> First run downloads `facebook/bart-large-mnli` (~1.6GB) and `all-MiniLM-L6-v2` (~90MB) automatically.
+
 ---
+
+## 💡 Example
+
+**Input:**
+```
+Topic: Alan Turing
+Answer: Alan Turing was a British mathematician. He invented the iPhone in 1950.
+        He worked at Bletchley Park during World War II.
+```
+
+**Output:**
+| Claim | Verdict | Confidence |
+|-------|---------|------------|
+| Alan Turing was a British mathematician | ✅ Entailment | 94% |
+| He invented the iPhone in 1950 | 🚨 Contradiction | 89% |
+| He worked at Bletchley Park during World War II | ✅ Entailment | 91% |
+
+**Hallucination Score: 0.31 → ⚠️ Partially Grounded**
+
+---
+
+## ⚙️ Tech Stack
+
+| Component | Tool |
+|-----------|------|
+| Claim splitting | NLTK sentence tokenizer |
+| Embeddings | `all-MiniLM-L6-v2` (Sentence Transformers) |
+| Vector search | FAISS (Facebook AI Similarity Search) |
+| NLI model | `facebook/bart-large-mnli` |
+| Evidence source | Wikipedia API |
+| App framework | Streamlit |
+
+---
+
+## 📦 Installation
+
+```
+transformers>=4.38.0
+sentence-transformers>=2.5.0
+faiss-cpu>=1.7.4
+wikipedia>=1.4.0
+nltk>=3.8.1
+streamlit>=1.32.0
+torch>=2.1.0
+numpy>=1.24.0
+```
+
+---
+
