@@ -8,7 +8,7 @@
 
 An end-to-end pipeline to detect hallucinations in LLM-generated answers by decomposing responses into atomic factual claims, retrieving Wikipedia evidence via semantic search, and verifying each claim using a transformer-based NLI model.
 
-👉 **[Try the Live App](https://YOUR-STREAMLIT-URL-HERE)**
+👉 **[Try the Live App](https://llm-hallucination-checker-bynishi.streamlit.app/)**
 
 ---
 
