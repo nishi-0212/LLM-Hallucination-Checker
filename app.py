@@ -112,6 +112,8 @@ if run:
         with st.spinner("Fetching Wikipedia evidence and running NLI model... (this takes ~20-30s on first run)"):
             try:
                 verdict, score, claim_results = check_answer(answer.strip(), subject.strip())
+                if verdict == "Unknown":
+                    st.error(f"Could not fetch Wikipedia article for: '{subject}'. Try a different spelling.")
             except Exception as e:
                 st.error(f"Something went wrong: {e}")
                 st.stop()

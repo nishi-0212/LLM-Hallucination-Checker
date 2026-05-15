@@ -14,13 +14,34 @@ def get_embed_model():
 def fetch_wiki(topic: str) -> str:
     wikipedia.set_lang("en")
     try:
+        # Try exact match first
         page = wikipedia.page(topic, auto_suggest=False)
-        return page.content[:5000]  # use more than just summary for better coverage
+        return page.content[:5000]
     except wikipedia.DisambiguationError as e:
         try:
-            return wikipedia.summary(e.options[0], sentences=10)
+            page = wikipedia.page(e.options[0], auto_suggest=False)
+            return page.content[:5000]
         except:
-            return "No information found"
+            pass
+    except Exception:
+        pass
+
+    try:
+        # Fall back to auto_suggest on — lets Wikipedia fuzzy match
+        page = wikipedia.page(topic, auto_suggest=True)
+        return page.content[:5000]
+    except wikipedia.DisambiguationError as e:
+        try:
+            page = wikipedia.page(e.options[0], auto_suggest=True)
+            return page.content[:5000]
+        except:
+            pass
+    except Exception:
+        pass
+
+    try:
+        # Last resort — just grab the summary
+        return wikipedia.summary(topic, sentences=15, auto_suggest=True)
     except Exception:
         return "No information found"
 
